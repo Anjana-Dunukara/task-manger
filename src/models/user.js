@@ -1,0 +1,45 @@
+const mongoose = require("mongoose");
+const validator = require("validator");
+require("../db/mongoose");
+
+const User = mongoose.model("User", {
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  age: {
+    type: Number,
+    default: 0,
+    validate(value) {
+      if (value < 0) {
+        throw new Error("Age must be a positive number");
+      }
+    },
+  },
+  email: {
+    type: String,
+    required: true,
+    trim: true,
+    lowercase: true,
+    validate(value) {
+      if (!validator.isEmail(value)) {
+        throw new Error("Email is invalid");
+      }
+    },
+  },
+  password: {
+    type: String,
+    required: true,
+    trim: true,
+    validate(value) {
+      if (value.length < 6) {
+        throw new Error("Password must contain atleast 6 characters");
+      } else if (value.toLowerCase().includes("password")) {
+        throw new Error("Password must not contain genaric words");
+      }
+    },
+  },
+});
+
+module.exports = User;
