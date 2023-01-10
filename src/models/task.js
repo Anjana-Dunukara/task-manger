@@ -10,16 +10,11 @@ const taskSchema = new mongoose.Schema({
     default: false,
     type: Boolean,
   },
-});
-
-taskSchema.pre("save", function (next) {
-  const task = this;
-
-  if (task.isModified("completed")) {
-    console.log("this is pre save");
-  }
-
-  next();
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: "User",
+  },
 });
 
 const Task = mongoose.model("Task", taskSchema);
