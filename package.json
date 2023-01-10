@@ -19,6 +19,7 @@
     },
     "homepage": "https://github.com/Anjana-Dunukara/task-manger#readme",
     "dependencies": {
+        "bcryptjs": "^2.4.3",
         "express": "^4.16.4",
         "mongodb": "3.7",
         "mongoose": "^5.9.13",
