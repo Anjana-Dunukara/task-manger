@@ -1,41 +1,115 @@
 const request = require("supertest");
 const app = require("../src/app");
 const User = require("../src/models/user");
+const {userOneId, userone, setUpDatabase} = require("../tests/fixtures/db")
 
-const userone = {
-  name: "Mike",
-  email: "mikemikaj@gmail.com",
-  password: "whatthehell123",
-};
-beforeEach(async () => {
-  await User.deleteMany();
-  await new User(userone).save();
-});
+
+beforeEach(setUpDatabase);
 
 test("Should signup a new user", async () => {
-  await request(app)
-    .post("/users")
-    .send({
-      name: "Anjana",
-      email: "anjanach@ieee.org",
-      password: "mywordpac123",
-    })
-    .expect(201);
+    const response = await request(app)
+        .post("/users")
+        .send({
+            name: "Anjana",
+            email: "anjanach@ieee.org",
+            password: "mywordpac123",
+        })
+        .expect(201);
+
+    //Assert that the database was changerd correctly
+    const user = await User.findById(response.body.user._id);
+    expect(user).not.toBeNull();
+
+    //Assertions about the response
+    expect(response.body).toMatchObject({
+        user: {
+            name: "Anjana",
+            email: "anjanach@ieee.org",
+        },
+        token: user.tokens[0].token,
+    });
+
+    expect(user.password).not.toBe("mywordpac123");
 });
 
 test("Should login exsiting user", async () => {
-  await request(app).post("/users/login").send({
-    email: userone.email,
-    password: userone.password,
-  });
+    const response = await request(app)
+        .post("/users/login")
+        .send({
+            email: userone.email,
+            password: userone.password,
+        })
+        .expect(200);
+
+    const user = await User.findById(userOneId);
+    expect(response.body.token).toBe(user.tokens[1].token);
 });
 
 test("Should not login nonexsiting user", async () => {
-  await request(app)
-    .post("/users/login")
-    .send({
-      email: "anjanahe@gmail.com",
-      password: "kalukumarajhon",
-    })
-    .expect(400);
+    await request(app)
+        .post("/users/login")
+        .send({
+            email: "anjanahe@gmail.com",
+            password: "kalukumarajhon",
+        })
+        .expect(400);
+});
+
+test("Should get profile for user", async () => {
+    await request(app)
+        .get("/users/me")
+        .set("Authorization", `Bearer ${userone.tokens[0].token}`)
+        .send()
+        .expect(200);
+});
+
+test("Should not get profile for unathanticated user", async () => {
+    await request(app).get("/users/me").send().expect(401);
+});
+
+test("Should delete account for user", async () => {
+    await request(app)
+        .delete("/users/me")
+        .set("Authorization", `Bearer ${userone.tokens[0].token}`)
+        .send()
+        .expect(200);
+
+    const user = await User.findById(userOneId);
+    expect(user).toBeNull();
+});
+
+test("Should not delete account for unathanticated user", async () => {
+    await request(app).delete("/users/me").send().expect(401);
+});
+
+test("Should upload avatar image", async () => {
+    await request(app)
+        .post("/users/me/avatar")
+        .set("Authorization", `Bearer ${userone.tokens[0].token}`)
+        .attach("avatar", "tests/fixtures/profile-pic.jpg")
+        .expect(200);
+
+    const user = await User.findById(userOneId);
+    expect(user.avatar).toEqual(expect.any(Buffer));
+});
+
+test("Should update valid user fields", async () => {
+    await request(app)
+        .patch("/users/me")
+        .set("Authorization", `Bearer ${userone.tokens[0].token}`)
+        .send({name: "Kalu malli"})
+        .expect(200);
+
+    const user = await User.findById(userOneId);
+    expect(user.name).toBe("Kalu malli");
+});
+
+test("Should not update invalid user fields", async () => {
+    await request(app)
+        .patch("/users/me")
+        .set("Authorization", `Bearer ${userone.tokens[0].token}`)
+        .send({
+            location: "Badulla",
+        })
+        .expect(400);
 });
